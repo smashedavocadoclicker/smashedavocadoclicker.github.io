@@ -26,13 +26,13 @@
 	</head>
 	<body>
 		<p id="instructions"></p>
-		<div id="avocado" onclick="return avocado_clicked();">
+		<div id="avocado" onclick="return avocado_clicked();" ontouchstart="return avocado_clicked();">
 			<img id="avocado_raw" src="avocado_raw.jpg" />
 			<img id="avocado_cut" src="avocado_cut.jpg" />
 			<img id="avocado_smashed" src="avocado_smashed.jpg" />
 			<img id="avocado_spread" src="avocado_spread.jpg" />
 		</div>
-		<p id="money" onclick="return money_clicked();"></p>
+		<p id="money" onclick="return money_clicked();" ontouchstart="return money_clicked();"></p>
 		<script type="text/javascript">
 
 function GameState()
@@ -42,6 +42,10 @@ function GameState()
 	this.money_target = 300000;
 
 	this.click_avocado = function() {
+		if (this.met_target()) {
+			return;
+		}
+
 		this.avocado_state += 1;
 		this.avocado_state %= 4;
 		if (this.avocado_state == 3) {
@@ -106,6 +110,8 @@ function money_clicked()
 	if (money_clicked_times.length >= 5 && money_clicked_times[money_clicked_times.length - 5] >= time_now - 1000) {
 		debug_menu();
 	}
+
+	return false;
 }
 
 function debug_menu()
