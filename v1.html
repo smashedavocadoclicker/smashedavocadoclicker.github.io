@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Smashed Avocado Clicker</title>
+		<meta charset="UTF-8" />
+		<link rel="preload" href="avocado_raw.jpg" />
+		<link rel="preload" href="avocado_cut.jpg" />
+		<link rel="preload" href="avocado_smashed.jpg" />
+		<link rel="preload" href="avocado_spread.jpg" />
+		<style type="text/css">
+
+#avocado > img
+{
+	display: none;
+}
+
+#avocado.avocado_state_raw > #avocado_raw
+, #avocado.avocado_state_cut > #avocado_cut
+, #avocado.avocado_state_smashed #avocado_smashed
+, #avocado.avocado_state_spread > #avocado_spread
+{
+	display: inline-block;
+}
+
+		</style>
+	</head>
+	<body>
+		<p id="instructions"></p>
+		<div id="avocado" onclick="return avocado_clicked();" ontouchstart="return avocado_clicked();">
+			<img id="avocado_raw" src="avocado_raw.jpg" />
+			<img id="avocado_cut" src="avocado_cut.jpg" />
+			<img id="avocado_smashed" src="avocado_smashed.jpg" />
+			<img id="avocado_spread" src="avocado_spread.jpg" />
+		</div>
+		<p id="money" onclick="return money_clicked();" ontouchstart="return money_clicked();"></p>
+		<script type="text/javascript">
+
+function GameState()
+{
+	this.avocado_state = 0; // raw
+	this.money = 0;
+	this.money_target = 300000;
+
+	this.click_avocado = function() {
+		if (this.met_target()) {
+			return;
+		}
+
+		this.avocado_state += 1;
+		this.avocado_state %= 4;
+		if (this.avocado_state == 3) {
+			this.money += 20;
+		}
+	};
+	this.rich_parents_cheat = function() {
+		this.money = this.money_target;
+	};
+	this.met_target = function() {
+		return this.money >= this.money_target;
+	};
+}
+
+var global_state = new GameState();
+var avocado_elem = document.getElementById('avocado');
+var instructions_elem = document.getElementById('instructions');
+var money_elem = document.getElementById('money');
+var money_clicked_times = [];
+
+function render_state(state)
+{
+	money_elem.innerText = 'You have $' + state.money + ' of $' + state.money_target + ' needed for a Sydney house deposit';
+	if (state.met_target()) {
+		instructions_elem.innerText = 'Congratulations! You saved enough for a Sydney house deposit. Stay tuned for the next update. pls like and subscribe';
+		return;
+	}
+
+	switch (state.avocado_state) {
+	case 0:
+		avocado_elem.className = 'avocado_state_raw';
+		instructions_elem.innerText = 'Click the avocado to cut it';
+		break;
+	case 1:
+		avocado_elem.className = 'avocado_state_cut';
+		instructions_elem.innerText = 'Click the avocado to smash it';
+		break;
+	case 2:
+		avocado_elem.className = 'avocado_state_smashed';
+		instructions_elem.innerText = 'Click the avocado to spread it on toast and sell it';
+		break;
+	case 3:
+		avocado_elem.className = 'avocado_state_spread';
+		instructions_elem.innerText = 'Sweet. Some millenial paid $20 for that smashed avocado toast. Click the toast to get your next avocado';
+		break;
+	}
+}
+
+function avocado_clicked()
+{
+	global_state.click_avocado();
+	render_state(global_state);
+	return false;
+}
+
+function money_clicked()
+{
+	var time_now = new Date().getTime();
+	money_clicked_times.push(time_now);
+
+	// click 5 times in 1 second to get the menu
+	if (money_clicked_times.length >= 5 && money_clicked_times[money_clicked_times.length - 5] >= time_now - 1000) {
+		debug_menu();
+	}
+
+	return false;
+}
+
+function debug_menu()
+{
+	var input = prompt('debug menu');
+	if (input == 'rich parents') {
+		global_state.rich_parents_cheat();
+		render_state(global_state);
+	}
+}
+
+render_state(global_state);
+		</script>
+	</body>
+</html>

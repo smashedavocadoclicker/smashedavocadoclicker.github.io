@@ -9,15 +9,25 @@
 		<link rel="preload" href="avocado_spread.jpg" />
 		<style type="text/css">
 
-#avocado > img
+.avocado > img
 {
 	display: none;
 }
 
-#avocado.avocado_state_raw > #avocado_raw
-, #avocado.avocado_state_cut > #avocado_cut
-, #avocado.avocado_state_smashed #avocado_smashed
-, #avocado.avocado_state_spread > #avocado_spread
+.avocado.raw > .avocado_raw
+, .avocado.cut > .avocado_cut
+, .avocado.smashed .avocado_smashed
+, .avocado.spread > .avocado_spread
+{
+	display: inline-block;
+}
+
+#buttons > button
+{
+	display: none;
+}
+
+#buttons > button.visible
 {
 	display: inline-block;
 }
@@ -26,20 +36,35 @@
 	</head>
 	<body>
 		<p id="instructions"></p>
-		<div id="avocado" onclick="return avocado_clicked();" ontouchstart="return avocado_clicked();">
-			<img id="avocado_raw" src="avocado_raw.jpg" />
-			<img id="avocado_cut" src="avocado_cut.jpg" />
-			<img id="avocado_smashed" src="avocado_smashed.jpg" />
-			<img id="avocado_spread" src="avocado_spread.jpg" />
+		<div id="avocado" class="avocado" onclick="return avocado_clicked();" ontouchstart="return avocado_clicked();">
+			<img class="avocado_raw" src="avocado_raw.jpg" />
+			<img class="avocado_cut" src="avocado_cut.jpg" />
+			<img class="avocado_smashed" src="avocado_smashed.jpg" />
+			<img class="avocado_spread" src="avocado_spread.jpg" />
 		</div>
 		<p id="money" onclick="return money_clicked();" ontouchstart="return money_clicked();"></p>
+		<p id="event"></p>
+		<p id="buttons">
+			<button id="button0" onclick="return button0_clicked();" ontouchstart="return button0_clicked();"></button>
+			<button id="button1" onclick="return button1_clicked();" ontouchstart="return button1_clicked();"></button>
+		</p>
+		<div id="intern_avocado" class="avocado">
+			<img width="25%" height="25%" class="avocado_raw" src="avocado_raw.jpg" />
+			<img width="25%" height="25%" class="avocado_cut" src="avocado_cut.jpg" />
+			<img width="25%" height="25%" class="avocado_smashed" src="avocado_smashed.jpg" />
+			<img width="25%" height="25%" class="avocado_spread" src="avocado_spread.jpg" />
+		</div>
 		<script type="text/javascript">
 
 function GameState()
 {
 	this.avocado_state = 0; // raw
-	this.money = 0;
-	this.money_target = 300000;
+	this.avocado_count = 0;
+	this.interns = 0;
+	this.intern_rejected = 0;
+	this.intern_avocado_state = -1; // hidden
+	this.intern_avocado_count = 0;
+	this.event_state = 0; // none
 
 	this.click_avocado = function() {
 		if (this.met_target()) {
@@ -49,14 +74,71 @@ function GameState()
 		this.avocado_state += 1;
 		this.avocado_state %= 4;
 		if (this.avocado_state == 3) {
-			this.money += 20;
+			this.avocado_count += 1;
 		}
 	};
+
 	this.rich_parents_cheat = function() {
-		this.money = this.money_target;
+		this.avocado_count = 15000;
 	};
+
+	this.path_cheat = function() {
+		this.avocado_count = 2;
+	};
+
+	this.path_skip_cheat = function() {
+		this.avocado_count = 7;
+	};
+
 	this.met_target = function() {
-		return this.money >= this.money_target;
+		return this.money() >= this.money_target();
+	};
+
+	this.event_state = function() {
+		if (this.money() >= 40 && this.money() < 140 && !this.interns && !this.intern_rejected) {
+			return 1;
+		}
+		if (this.interns) {
+			return 2;
+		}
+		if (this.intern_rejected_or_ignored()) {
+			return 3;
+		}
+		return 0;
+	};
+
+	this.event_choice0 = function() {
+		this.interns = 1;
+		this.intern_avocado_state = 0;
+	};
+
+	this.event_choice1 = function() {
+		this.intern_rejected = 1;
+	};
+
+	this.money_target = function() {
+		if (this.intern_rejected_or_ignored()) {
+			return 450000;
+		}
+		return 300000;
+	};
+
+	this.intern_tick = function() {
+		if (this.interns) {
+			this.intern_avocado_state += 1;
+			this.intern_avocado_state %= 4;
+			if (this.intern_avocado_state == 3) {
+				this.intern_avocado_count += 1;
+			}
+		}
+	};
+
+	this.money = function() {
+		return 20 * (this.avocado_count + this.intern_avocado_count);
+	}
+
+	this.intern_rejected_or_ignored = function() {
+		return !this.interns && (this.intern_rejected || this.money() >= 140);
 	};
 }
 
@@ -65,10 +147,66 @@ var avocado_elem = document.getElementById('avocado');
 var instructions_elem = document.getElementById('instructions');
 var money_elem = document.getElementById('money');
 var money_clicked_times = [];
+var event_elem = document.getElementById('event');
+var button0_elem = document.getElementById('button0');
+var button1_elem = document.getElementById('button1');
+var intern_avocado_elem = document.getElementById('intern_avocado');
 
 function render_state(state)
 {
-	money_elem.innerText = 'You have $' + state.money + ' of $' + state.money_target + ' needed for a Sydney house deposit';
+	money_elem.innerText = 'You have $' + state.money() + ' of $' + state.money_target() + ' needed for a Sydney house deposit';
+
+	switch (state.event_state()) {
+	case 0:
+		event_elem.innerHTML = '';
+		button0_elem.className = '';
+		button0_elem.innerText = '';
+		button1_elem.className = '';
+		button1_elem.innerText = '';
+		break;
+	case 1:
+		event_elem.innerHTML = '<a target="_blank" href="https://www.theguardian.com/commentisfree/2017/jul/05/come-at-me-you-parasites-a-real-live-intern-reacts-to-path-program">'
+			+ 'Great news! The government just announced a program where you can get paid $1000 to "train" an unpaid intern.'
+			+ '</a>'
+		;
+		button0_elem.className = 'visible';
+		button0_elem.innerText = 'Hire!';
+		button1_elem.className = 'visible';
+		button1_elem.innerText = "Don't hire!";
+		break;
+	case 2:
+		event_elem.innerHTML = 'Your unpaid intern is productively smashing avocados for you. ' + state.intern_avocado_count + ' avocadoes smashed so far!';
+		button0_elem.className = '';
+		button0_elem.innerText = '';
+		button1_elem.className = '';
+		button1_elem.innerText = '';
+		break;
+	case 3:
+		event_elem.innerHTML = 'All your competitors are profiting so much from unpaid interns that house prices have gone up 50%! Did you forget how the "free market" works?';
+		button0_elem.className = '';
+		button0_elem.innerText = '';
+		button1_elem.className = '';
+		button1_elem.innerText = '';
+	}
+
+	switch (state.intern_avocado_state) {
+	case -1:
+		intern_avocado_elem.className = 'avocado';
+		break;
+	case 0:
+		intern_avocado_elem.className = 'avocado raw';
+		break;
+	case 1:
+		intern_avocado_elem.className = 'avocado cut';
+		break;
+	case 2:
+		intern_avocado_elem.className = 'avocado smashed';
+		break;
+	case 3:
+		intern_avocado_elem.className = 'avocado spread';
+		break;
+	}
+
 	if (state.met_target()) {
 		instructions_elem.innerText = 'Congratulations! You saved enough for a Sydney house deposit. Stay tuned for the next update. pls like and subscribe';
 		return;
@@ -76,19 +214,19 @@ function render_state(state)
 
 	switch (state.avocado_state) {
 	case 0:
-		avocado_elem.className = 'avocado_state_raw';
+		avocado_elem.className = 'avocado raw';
 		instructions_elem.innerText = 'Click the avocado to cut it';
 		break;
 	case 1:
-		avocado_elem.className = 'avocado_state_cut';
+		avocado_elem.className = 'avocado cut';
 		instructions_elem.innerText = 'Click the avocado to smash it';
 		break;
 	case 2:
-		avocado_elem.className = 'avocado_state_smashed';
+		avocado_elem.className = 'avocado smashed';
 		instructions_elem.innerText = 'Click the avocado to spread it on toast and sell it';
 		break;
 	case 3:
-		avocado_elem.className = 'avocado_state_spread';
+		avocado_elem.className = 'avocado spread';
 		instructions_elem.innerText = 'Sweet. Some millenial paid $20 for that smashed avocado toast. Click the toast to get your next avocado';
 		break;
 	}
@@ -106,8 +244,8 @@ function money_clicked()
 	var time_now = new Date().getTime();
 	money_clicked_times.push(time_now);
 
-	// click 5 times in 1 second to get the menu
-	if (money_clicked_times.length >= 5 && money_clicked_times[money_clicked_times.length - 5] >= time_now - 1000) {
+	// click 3 times in 1 second to get the menu
+	if (money_clicked_times.length >= 3 && money_clicked_times[money_clicked_times.length - 3] >= time_now - 1000) {
 		debug_menu();
 	}
 
@@ -120,10 +258,39 @@ function debug_menu()
 	if (input == 'rich parents') {
 		global_state.rich_parents_cheat();
 		render_state(global_state);
+	} else if (input == 'path') {
+		global_state.path_cheat();
+		render_state(global_state);
+	} else if (input == 'path skip') {
+		global_state.path_skip_cheat();
+		render_state(global_state);
 	}
 }
 
+function button0_clicked()
+{
+	global_state.event_choice0();
+	render_state(global_state);
+	return false;
+}
+
+function button1_clicked()
+{
+	global_state.event_choice1();
+	render_state(global_state);
+	return false;
+}
+
 render_state(global_state);
+
+function global_on_tick()
+{
+	global_state.intern_tick();
+	render_state(global_state);
+	window.setTimeout(global_on_tick, 150);
+}
+
+window.setTimeout(global_on_tick, 150);
 		</script>
 	</body>
 </html>
